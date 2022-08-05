@@ -1,4 +1,19 @@
 
+provider "helm" {
+
+}
+
+
+resource "helm_release" "airflow" {
+  name       = "airflow"
+  repository = "https://airflow.apache.org"
+  chart      = "apache-airflow"
+  timeout    = 650
+  values = [file("values.yaml")]
+}
+
+
+
 module "gke" {
   source                     = "terraform-google-modules/kubernetes-engine/google"
   project_id                 = var.gcp_project_id
