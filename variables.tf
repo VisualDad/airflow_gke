@@ -31,7 +31,6 @@ variable "gke_zones" {
 }
 
 
-
 variable "gke_network" {
   type=string
   description= "VPC Network"
@@ -53,6 +52,25 @@ variable "gke_service_account_name" {
   type=string
   description= "gke service account name"
 }
+
+
+
+
+
+
+
+
+
+
+
+variable "service_account_name" {
+  default     = "postgres"
+  description = "The Kubernetes service account name"
+}
+
+
+
+
 
 
 

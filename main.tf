@@ -1,99 +1,129 @@
-
-provider "helm" {
-
+locals {
+  auth_fernet_key = base64encode(substr(random_password.fernet_key.result, 0, 32))
+  postgresql_enable_embedded = true
 }
+
+
 
 
 resource "helm_release" "airflow" {
   name       = "airflow"
-  repository = "https://airflow.apache.org"
-  chart      = "apache-airflow"
-  timeout    = 650
-  values = [file("values.yaml")]
+  # repository = "https://artifacthub.io/packages/helm/airflow-helm/airflow/8.5.0"
+  chart      = "airflow-kubernetes-chart"
+  namespace  = "default"
+  timeout    = 3600
+  wait = true
+  # version = "2.1.2"
+  values = [
+    "${file("airflow-kubernetes-chart/values.yaml")}"
+  ]
+
+  set {
+    name  = "rbac.create"
+    value = true
+  }
+
+  set {
+    name  = "serviceAccount.name"
+    value = var.service_account_name
+  }
+
+  set {
+    name  = "serviceAccount.create"
+    value = true
+  }
+
+  set {
+    name  = "service.type"
+    value = "LoadBalancer"
+  }
+
+
+
+  set {
+    name  = "uid"
+    value = 1000
+  }
+
+  set {
+    name  = "gid"
+    value = 1000
+  }
+
+  set_sensitive {
+    name = "airflow.fernetKey"
+    value = local.auth_fernet_key
+  }
+
+  set {
+    name = "postgresql.enabled"
+    value = local.postgresql_enable_embedded
+  }
+
+  set {
+    name = "redis.enabled"
+    value = false
+  }
+
+  set {
+  name = "workers.enabled"
+  value = false
+  }
+
+  set {
+  name = "flower.enabled"
+  value = false
+  }
+
+  set {
+  name = "redis.enabled"
+  value = false
+  }
+
+  set {
+    name = "airflow.executor"
+    value = "KubernetesExecutor,"
+  }
+
+  set_sensitive {
+    name = "airflow.webserverSecretKey"
+    value = random_password.webserverSecretKey.result
+  }
+
+}
+
+resource random_password "fernet_key" {
+  length = 128
+}
+
+resource random_password "webserverSecretKey" {
+  length = 128
 }
 
 
+resource "google_container_cluster" "primary" {
+  name     = "airflow-test-cluster"
+  location = "us-central1"
 
-module "gke" {
-  source                     = "terraform-google-modules/kubernetes-engine/google"
-  project_id                 = var.gcp_project_id
-  name                       = var.gke_cluster_name
-  region                     = var.gcp_region
-  regional                   = var.gke_regional
-  ip_range_pods              = ""
-  ip_range_services          = ""
-  zones                      = var.gke_zones
-  network                    = var.gke_network
-  subnetwork                 = var.gke_subnetwork
 
-  http_load_balancing        = false
-  network_policy             = false
-  horizontal_pod_autoscaling = true
-  filestore_csi_driver       = false
+  # We can't create a cluster with no node pool defined, but we want to only use
+  # separately managed node pools. So we create the smallest possible default
+  # node pool and immediately delete it.
+  remove_default_node_pool = true
+  initial_node_count       = 1
+}
 
-  node_pools = [
-    {
-      name                      = var.gke_default_nodepool_name
-      machine_type              = "n1-standard-4"
+resource "google_container_node_pool" "primary_preemptible_nodes" {
+  name       = "my-custom-node-pool"
+  cluster    = google_container_cluster.primary.id
+  node_count = 1
 
-      min_count                 = 1
-      max_count                 = 3
-      local_ssd_count           = 0
-      spot                      = false
-      disk_size_gb              = 100
-      disk_type                 = "pd-standard"
-      image_type                = "COS_CONTAINERD"
-      enable_gcfs               = false
-      enable_gvnic              = false
-      auto_repair               = true
-      auto_upgrade              = true
-      service_account           = var.gke_service_account_name
-      preemptible               = true
-      initial_node_count        = 1
-    },
-  ]
+  node_config {
+    preemptible  = true
+    machine_type = "n1-standard-2"
 
-  node_pools_oauth_scopes = {
-    all = []
-
-    default-node-pool = [
-      "https://www.googleapis.com/auth/cloud-platform",
-    ]
-  }
-
-  node_pools_labels = {
-    all = {}
-
-    default-node-pool = {
-      default-node-pool = true
-    }
-  }
-
-  node_pools_metadata = {
-    all = {}
-
-    default-node-pool = {
-      node-pool-metadata-custom-value = "my-node-pool"
-    }
-  }
-
-  node_pools_taints = {
-    all = []
-
-    default-node-pool = [
-      {
-        key    = "default-node-pool"
-        value  = true
-        effect = "PREFER_NO_SCHEDULE"
-      },
-    ]
-  }
-
-  node_pools_tags = {
-    all = []
-
-    default-node-pool = [
-      "default-node-pool",
+    oauth_scopes = [
+      "https://www.googleapis.com/auth/cloud-platform"
     ]
   }
 }
