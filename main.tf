@@ -3,6 +3,15 @@ locals {
   postgresql_enable_embedded = true
 }
 
+
+resource "google_artifact_registry_repository" "my-repo" {
+  location      = "us-central1"
+  repository_id = "airflow-gke-test"
+  description   = "Docker repository for custom Airflow images"
+  format        = "DOCKER"
+}
+
+
 resource "kubernetes_secret" "ssh_key_airflow_gke_test" {
   metadata {
     name      = "airflow-git-ssh-secret-test"
