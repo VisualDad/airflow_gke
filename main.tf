@@ -47,6 +47,18 @@ resource "helm_release" "airflow" {
     value = var.service_account_name
   }
 
+
+  set {
+    name = "airflow.image.repository"
+    value = "us-central1-docker.pkg.dev/airflow-test-cluster/airflow-gke-test/airflow-plugins-dependencies"
+  }
+
+  set {
+    name = "airflow.image.tag"
+    value = "1.0.0"
+  }
+
+
   set {
     name  = "serviceAccount.create"
     value = true
