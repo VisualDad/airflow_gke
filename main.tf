@@ -3,7 +3,17 @@ locals {
   postgresql_enable_embedded = true
 }
 
+resource "kubernetes_secret" "ssh_key_airflow_gke_test" {
+  metadata {
+    name      = "airflow-git-ssh-secret-test"
+  }
 
+  data = {
+    "id_rsa" = file("/Users/Thomas/.ssh/airflow-gke-test")
+  }
+
+  type = "Opaque"
+}
 
 
 resource "helm_release" "airflow" {
@@ -32,12 +42,6 @@ resource "helm_release" "airflow" {
     name  = "serviceAccount.create"
     value = true
   }
-
-  set {
-    name  = "service.type"
-    value = "LoadBalancer"
-  }
-
 
 
   set {
@@ -104,6 +108,9 @@ resource random_password "webserverSecretKey" {
 resource "google_container_cluster" "primary" {
   name     = "airflow-test-cluster"
   location = "us-central1"
+  node_locations = [
+    "us-central1-a"
+  ]
 
 
   # We can't create a cluster with no node pool defined, but we want to only use
@@ -126,4 +133,5 @@ resource "google_container_node_pool" "primary_preemptible_nodes" {
       "https://www.googleapis.com/auth/cloud-platform"
     ]
   }
+
 }
