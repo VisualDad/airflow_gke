@@ -4,6 +4,54 @@ locals {
 }
 
 
+
+
+resource "google_storage_bucket" "static-site" {
+  project = "airflow-test-cluster"
+  name          = "example-data-bucket-asdxasdx"
+  location      = "EU"
+  force_destroy = true
+
+  uniform_bucket_level_access = true
+
+  website {
+    main_page_suffix = "index.html"
+    not_found_page   = "404.html"
+  }
+  cors {
+    origin          = ["http://image-store.com"]
+    method          = ["GET", "HEAD", "PUT", "POST", "DELETE"]
+    response_header = ["*"]
+    max_age_seconds = 3600
+  }
+}
+
+
+resource "google_service_account" "sa" {
+  account_id   = "airflow-gke-storagebucket"
+  display_name = "A service account for the Google Storgage Bucket"
+}
+
+
+# We have to ...
+
+#resource "google_service_account_iam_binding" "admin-account-iam" {
+#  service_account_id = google_service_account.sa.name
+#  role               = "roles/storage.admin"
+#
+#  members = [
+#    "user:visual.dad.com@gmail.com",
+#  ]
+#}
+
+
+
+
+
+
+
+
+
 resource "google_artifact_registry_repository" "my-repo" {
   location      = "us-central1"
   repository_id = "airflow-gke-test"
