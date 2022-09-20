@@ -6,7 +6,7 @@ from plugins.custom_operators.gcs_operators import ExampleDataToGCSOperator
 
 with DAG(
     'create_and_write_example_data_to_gcs',
-    start_date=datetime(2021, 1, 1),
+    start_date=datetime(2022, 9, 18),
     schedule_interval='@daily'
 ) as dag:
 
